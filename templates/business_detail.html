@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Business Details - {{ business.name }}</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: #f5f5f5;
+            color: #333;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            border-radius: 10px;
+        }
+        
+        .header h1 {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .header p {
+            opacity: 0.9;
+        }
+        
+        .nav-links {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        
+        .nav-link {
+            background: white;
+            color: #667eea;
+            text-decoration: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            transition: all 0.3s;
+        }
+        
+        .nav-link:hover {
+            background: #667eea;
+            color: white;
+            transform: translateY(-2px);
+        }
+        
+        .business-card {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .business-header {
+            background: #667eea;
+            color: white;
+            padding: 1.5rem;
+            text-align: center;
+        }
+        
+        .business-content {
+            padding: 2rem;
+        }
+        
+        .detail-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+        }
+        
+        .detail-item {
+            padding: 1rem;
+            background: #f8f9fa;
+            border-radius: 5px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .detail-label {
+            font-weight: 600;
+            color: #555;
+            margin-bottom: 0.5rem;
+        }
+        
+        .detail-value {
+            color: #333;
+            word-break: break-all;
+        }
+        
+        .detail-value a {
+            color: #667eea;
+            text-decoration: none;
+        }
+        
+        .detail-value a:hover {
+            text-decoration: underline;
+        }
+        
+        .status-section {
+            margin-top: 2rem;
+            padding: 1.5rem;
+            background: #f8f9fa;
+            border-radius: 5px;
+            text-align: center;
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 0.5rem 1rem;
+            border-radius: 25px;
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+        
+        .status-contacted {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .status-not-contacted {
+            background: #fff3cd;
+            color: #856404;
+        }
+        
+        .contact-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background-color 0.3s;
+        }
+        
+        .contact-btn:hover {
+            background: #5a6fd8;
+        }
+        
+        .contact-btn.contacted {
+            background: #28a745;
+        }
+        
+        .contact-btn.not-contacted {
+            background: #ffc107;
+            color: #212529;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🏢 {{ business.name }}</h1>
+            <p>Business Details | Database: {{ db_type }}</p>
+        </div>
+        
+        <div class="nav-links">
+            <a href="/" class="nav-link">📊 Dashboard</a>
+            <a href="/export" class="nav-link">📤 Export Data</a>
+        </div>
+        
+        <div class="business-card">
+            <div class="business-header">
+                <h2>{{ business.name }}</h2>
+            </div>
+            
+            <div class="business-content">
+                <div class="detail-grid">
+                    <div class="detail-item">
+                        <div class="detail-label">📞 Phone Number</div>
+                        <div class="detail-value">
+                            {% if business.phone %}
+                                <a href="tel:{{ business.phone }}">{{ business.phone }}</a>
+                            {% else %}
+                                Not available
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="detail-item">
+                        <div class="detail-label">🌐 Website</div>
+                        <div class="detail-value">
+                            {% if business.website %}
+                                <a href="{{ business.website }}" target="_blank">{{ business.website }}</a>
+                            {% else %}
+                                Not available
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="detail-item">
+                        <div class="detail-label">📧 Email</div>
+                        <div class="detail-value">
+                            {% if business.email %}
+                                <a href="mailto:{{ business.email }}">{{ business.email }}</a>
+                            {% else %}
+                                Not available
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="detail-item">
+                        <div class="detail-label">📱 WhatsApp</div>
+                        <div class="detail-value">
+                            {% if business.whatsapp %}
+                                {{ business.whatsapp }}
+                            {% else %}
+                                Not available
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="detail-item">
+                        <div class="detail-label">📷 Instagram</div>
+                        <div class="detail-value">
+                            {% if business.instagram %}
+                                <a href="{{ business.instagram }}" target="_blank">{{ business.instagram }}</a>
+                            {% else %}
+                                Not available
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="detail-item">
+                        <div class="detail-label">⭐ Rating</div>
+                        <div class="detail-value">
+                            {% if business.rating %}
+                                {{ business.rating }}/5 ({{ business.reviews or 0 }} reviews)
+                            {% else %}
+                                Not rated
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="detail-item" style="grid-column: 1 / -1;">
+                        <div class="detail-label">📍 Address</div>
+                        <div class="detail-value">
+                            {% if business.address %}
+                                {{ business.address }}
+                            {% else %}
+                                Not available
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="detail-item">
+                        <div class="detail-label">🔍 Search Keyword</div>
+                        <div class="detail-value">{{ business.search_keyword or 'Unknown' }}</div>
+                    </div>
+                    
+                    <div class="detail-item">
+                        <div class="detail-label">📅 Added Date</div>
+                        <div class="detail-value">
+                            {% if business.created_at %}
+                                {{ business.created_at }}
+                            {% else %}
+                                Unknown
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="status-section">
+                    <div class="status-badge {{ 'status-contacted' if business.contacted else 'status-not-contacted' }}">
+                        {{ '✅ Contacted' if business.contacted else '⏳ Not Contacted' }}
+                    </div>
+                    <br>
+                    <button class="contact-btn {{ 'contacted' if business.contacted else 'not-contacted' }}" 
+                            onclick="toggleContact('{{ business._id }}', {{ 'false' if business.contacted else 'true' }})">
+                        {{ 'Mark as Not Contacted' if business.contacted else 'Mark as Contacted' }}
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        async function toggleContact(businessId, contacted) {
+            try {
+                const response = await fetch(`/api/contact/${businessId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ contacted: contacted === 'true' })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Reload the page to show updated status
+                    location.reload();
+                } else {
+                    alert(`Error: ${data.error}`);
+                }
+            } catch (error) {
+                alert(`Error updating contact status: ${error.message}`);
+            }
+        }
+    </script>
+</body>
+</html>

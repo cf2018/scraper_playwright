@@ -1,0 +1,24 @@
+# Core automation and scraping
+playwright>=1.55.0
+
+# Web framework and API
+flask>=3.1.2
+flask-cors>=6.0.1
+
+# Database connectivity
+pymongo>=4.15.3
+python-dotenv>=1.1.1
+
+# Web framework dependencies
+click>=8.3.0
+itsdangerous>=2.2.0
+Jinja2>=3.1.6
+MarkupSafe>=3.0.3
+Werkzeug>=3.1.3
+blinker>=1.9.0
+
+# Additional dependencies
+dnspython>=2.8.0
+greenlet>=3.2.4
+pyee>=13.0.0
+typing_extensions>=4.15.0

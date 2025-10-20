@@ -1,0 +1,46 @@
+# Example Terraform variables file
+# Copy this file to terraform.tfvars and customize for your deployment
+
+# AWS Configuration
+aws_region = "us-east-1"
+environment = "dev"
+project_name = "business-scraper"
+
+# Lambda Configuration
+lambda_function_name = "business-scraper"
+lambda_timeout = 300
+lambda_memory_size = 1024
+lambda_reserved_concurrency = 5
+
+# MongoDB Configuration (optional)
+mongodb_connection_string = "mongodb+srv://username:password@cluster.mongodb.net/database?retryWrites=true&w=majority"
+
+# API Gateway Configuration
+enable_api_gateway = true
+api_gateway_stage_name = "prod"
+
+# Monitoring Configuration
+enable_cloudwatch_logs = true
+enable_cloudwatch_alarms = true
+enable_cloudwatch_dashboard = true
+enable_custom_metrics = true
+enable_xray_tracing = false
+log_retention_days = 14
+
+# EventBridge Scheduling
+enable_eventbridge_schedule = true
+eventbridge_schedule_expression = "rate(1 day)"
+default_search_query = "registro de marcas en buenos aires"
+default_max_results = 50
+
+# Notification Configuration (optional)
+# sns_topic_arn = "arn:aws:sns:us-east-1:123456789012:alerts"
+
+# Resource Tags
+tags = {
+  Project     = "business-scraper"
+  Environment = "dev"
+  Owner       = "your-team"
+  ManagedBy   = "terraform"
+  CostCenter  = "engineering"
+}

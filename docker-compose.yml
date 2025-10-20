@@ -1,0 +1,68 @@
+version: '3.8'
+
+services:
+  # Business Scraper Dashboard
+  dashboard:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    ports:
+      - "5001:5000"
+    volumes:
+      - .:/app
+      - /app/venv
+      - json_data:/app/json_output
+    environment:
+      - FLASK_APP=dashboard.py
+      - FLASK_ENV=development
+      - FLASK_DEBUG=1
+      - PYTHONPATH=/app
+      - PLAYWRIGHT_HEADLESS=true
+    networks:
+      - scraper-network
+    restart: unless-stopped
+
+  # Optional: MongoDB for data storage
+  mongodb:
+    image: mongo:7.0
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=admin
+      - MONGO_INITDB_ROOT_PASSWORD=password123
+      - MONGO_INITDB_DATABASE=business_scraper
+    networks:
+      - scraper-network
+    restart: unless-stopped
+
+  # Scraper service (can be run separately)
+  scraper:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    volumes:
+      - .:/app
+      - /app/venv
+      - json_data:/app/json_output
+    environment:
+      - PYTHONPATH=/app
+      - PLAYWRIGHT_HEADLESS=true
+      - MONGODB_CONNECTION_STRING=mongodb://admin:password123@mongodb:27017/
+      - MONGODB_DATABASE=business_scraper
+    command: python scrape_businesses_maps.py "registro de marcas en buenos aires" --max-results 10
+    networks:
+      - scraper-network
+    depends_on:
+      - mongodb
+    profiles:
+      - scraper
+
+volumes:
+  mongodb_data:
+  json_data:
+
+networks:
+  scraper-network:
+    driver: bridge

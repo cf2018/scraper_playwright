@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Google Maps Business Scraper</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            color: white;
+        }
+
+        .header h1 {
+            font-size: 3rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+
+        .search-card {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+            backdrop-filter: blur(10px);
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #555;
+            font-size: 1.1rem;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 15px 20px;
+            border: 2px solid #e1e5e9;
+            border-radius: 10px;
+            font-size: 1.1rem;
+            transition: all 0.3s ease;
+            background: #f8f9fa;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+            background: white;
+        }
+
+        .form-row {
+            display: flex;
+            gap: 20px;
+            align-items: end;
+        }
+
+        .form-row .form-group {
+            flex: 1;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 10px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            min-width: 180px;
+            justify-content: center;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .progress-section {
+            display: none;
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        .progress-bar {
+            background: #e9ecef;
+            border-radius: 10px;
+            overflow: hidden;
+            height: 20px;
+            margin-bottom: 20px;
+        }
+
+        .progress-fill {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            height: 100%;
+            border-radius: 10px;
+            transition: width 0.3s ease;
+            width: 0%;
+        }
+
+        .progress-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .status-badge {
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+
+        .status-running {
+            background: #e3f2fd;
+            color: #1976d2;
+        }
+
+        .status-completed {
+            background: #e8f5e8;
+            color: #2e7d32;
+        }
+
+        .status-error {
+            background: #ffebee;
+            color: #c62828;
+        }
+
+        .results-section {
+            display: none;
+        }
+
+        .results-header {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        .results-header h2 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 2rem;
+        }
+
+        .download-btn {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            margin-top: 15px;
+        }
+
+        .business-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 25px;
+        }
+
+        .business-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+            border-left: 5px solid #667eea;
+        }
+
+        .business-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .business-name {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .contact-info {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .contact-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 0;
+        }
+
+        .contact-icon {
+            width: 20px;
+            color: #667eea;
+        }
+
+        .contact-value {
+            flex: 1;
+            font-size: 0.95rem;
+        }
+
+        .contact-value a {
+            color: #667eea;
+            text-decoration: none;
+        }
+
+        .contact-value a:hover {
+            text-decoration: underline;
+        }
+
+        .rating {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            color: #ff9800;
+        }
+
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error-message {
+            background: #ffebee;
+            color: #c62828;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            border-left: 5px solid #c62828;
+        }
+
+        @media (max-width: 768px) {
+            .form-row {
+                flex-direction: column;
+            }
+            
+            .business-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .search-card {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1><i class="fas fa-map-marker-alt"></i> Business Scraper</h1>
+            <p>Extract business information from Google Maps with modern web interface</p>
+        </div>
+
+        <div class="search-card">
+            <form id="searchForm">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="searchQuery">
+                            <i class="fas fa-search"></i> Search Query
+                        </label>
+                        <input 
+                            type="text" 
+                            id="searchQuery" 
+                            class="form-control" 
+                            placeholder="e.g., plomeros Buenos Aires, restaurants New York"
+                            required
+                        >
+                    </div>
+                    <div class="form-group" style="flex: 0 0 200px;">
+                        <label for="maxResults">
+                            <i class="fas fa-list-ol"></i> Max Results
+                        </label>
+                        <input 
+                            type="number" 
+                            id="maxResults" 
+                            class="form-control" 
+                            value="10" 
+                            min="1" 
+                            max="50"
+                        >
+                    </div>
+                    <div class="form-group" style="flex: 0 0 auto;">
+                        <button type="submit" class="btn" id="searchBtn">
+                            <i class="fas fa-rocket"></i> Start Scraping
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <div class="progress-section" id="progressSection">
+            <div class="progress-info">
+                <div>
+                    <h3 id="progressTitle">Scraping in progress...</h3>
+                    <p id="progressQuery"></p>
+                </div>
+                <span class="status-badge status-running" id="statusBadge">Running</span>
+            </div>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+            <div style="display: flex; justify-content: space-between; font-size: 0.9rem; color: #666;">
+                <span id="progressText">0% Complete</span>
+                <span id="resultsFound">0 results found</span>
+            </div>
+        </div>
+
+        <div class="results-section" id="resultsSection">
+            <div class="results-header">
+                <h2 id="resultsTitle">Scraping Results</h2>
+                <p id="resultsSummary"></p>
+                <button class="btn download-btn" id="downloadBtn" style="display: none;">
+                    <i class="fas fa-download"></i> Download JSON
+                </button>
+            </div>
+            <div class="business-grid" id="businessGrid"></div>
+        </div>
+
+        <div id="errorContainer"></div>
+    </div>
+
+    <script>
+        let currentTaskId = null;
+        let progressInterval = null;
+
+        document.getElementById('searchForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const searchQuery = document.getElementById('searchQuery').value.trim();
+            const maxResults = parseInt(document.getElementById('maxResults').value);
+            
+            if (!searchQuery) {
+                showError('Please enter a search query');
+                return;
+            }
+
+            // Reset UI
+            clearError();
+            showProgress();
+            resetProgress();
+            
+            const searchBtn = document.getElementById('searchBtn');
+            searchBtn.disabled = true;
+            searchBtn.innerHTML = '<div class="loading-spinner"></div> Starting...';
+
+            try {
+                const response = await fetch('/api/scrape', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        search_query: searchQuery,
+                        max_results: maxResults
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    currentTaskId = data.task_id;
+                    document.getElementById('progressQuery').textContent = `Searching for: ${searchQuery}`;
+                    startProgressMonitoring();
+                } else {
+                    throw new Error(data.error || 'Failed to start scraping');
+                }
+
+            } catch (error) {
+                showError('Error starting scraping: ' + error.message);
+                resetButton();
+            }
+        });
+
+        function startProgressMonitoring() {
+            if (progressInterval) {
+                clearInterval(progressInterval);
+            }
+
+            progressInterval = setInterval(async () => {
+                try {
+                    const response = await fetch(`/api/status/${currentTaskId}`);
+                    const data = await response.json();
+
+                    if (response.ok) {
+                        updateProgress(data);
+                        
+                        if (data.status === 'completed' || data.status === 'error') {
+                            clearInterval(progressInterval);
+                            progressInterval = null;
+                            
+                            if (data.status === 'completed') {
+                                showResults(data);
+                            } else {
+                                showError('Scraping failed: ' + data.error);
+                            }
+                            resetButton();
+                        }
+                    } else {
+                        throw new Error(data.error || 'Failed to get status');
+                    }
+                } catch (error) {
+                    clearInterval(progressInterval);
+                    progressInterval = null;
+                    showError('Error monitoring progress: ' + error.message);
+                    resetButton();
+                }
+            }, 2000);
+        }
+
+        function updateProgress(data) {
+            const progressFill = document.getElementById('progressFill');
+            const progressText = document.getElementById('progressText');
+            const resultsFound = document.getElementById('resultsFound');
+            const statusBadge = document.getElementById('statusBadge');
+
+            progressFill.style.width = data.progress + '%';
+            progressText.textContent = Math.round(data.progress) + '% Complete';
+            resultsFound.textContent = data.total_found + ' results found';
+
+            // Update status badge
+            statusBadge.className = 'status-badge status-' + data.status;
+            statusBadge.textContent = data.status.charAt(0).toUpperCase() + data.status.slice(1);
+        }
+
+        function showResults(data) {
+            const resultsSection = document.getElementById('resultsSection');
+            const resultsTitle = document.getElementById('resultsTitle');
+            const resultsSummary = document.getElementById('resultsSummary');
+            const businessGrid = document.getElementById('businessGrid');
+            const downloadBtn = document.getElementById('downloadBtn');
+
+            // Update header
+            resultsTitle.textContent = `Found ${data.total_found} businesses`;
+            resultsSummary.textContent = `Search: "${data.search_query}" • Duration: ${data.duration || 'N/A'}`;
+
+            // Show download button
+            if (data.json_file) {
+                downloadBtn.style.display = 'inline-flex';
+                downloadBtn.onclick = () => {
+                    window.open(`/api/download/${data.task_id}`, '_blank');
+                };
+            }
+
+            // Generate business cards
+            businessGrid.innerHTML = '';
+            data.results.forEach(business => {
+                const card = createBusinessCard(business);
+                businessGrid.appendChild(card);
+            });
+
+            resultsSection.style.display = 'block';
+        }
+
+        function createBusinessCard(business) {
+            const card = document.createElement('div');
+            card.className = 'business-card';
+
+            const contacts = [];
+            
+            if (business.phone) {
+                contacts.push({
+                    icon: 'fas fa-phone',
+                    label: 'Phone',
+                    value: business.phone,
+                    href: `tel:${business.phone}`
+                });
+            }
+            
+            if (business.whatsapp) {
+                const whatsappNumbers = business.whatsapp.includes(',') 
+                    ? business.whatsapp.split(',').map(n => n.trim())
+                    : [business.whatsapp];
+                
+                whatsappNumbers.forEach(num => {
+                    contacts.push({
+                        icon: 'fab fa-whatsapp',
+                        label: 'WhatsApp',
+                        value: num,
+                        href: `https://wa.me/${num.replace(/[^\d]/g, '')}`
+                    });
+                });
+            }
+            
+            if (business.email) {
+                contacts.push({
+                    icon: 'fas fa-envelope',
+                    label: 'Email',
+                    value: business.email,
+                    href: `mailto:${business.email}`
+                });
+            }
+            
+            if (business.url) {
+                contacts.push({
+                    icon: 'fas fa-globe',
+                    label: 'Website',
+                    value: business.url.length > 30 ? business.url.substring(0, 30) + '...' : business.url,
+                    href: business.url
+                });
+            }
+            
+            if (business.instagram) {
+                contacts.push({
+                    icon: 'fab fa-instagram',
+                    label: 'Instagram',
+                    value: business.instagram.replace('https://instagram.com/', '@'),
+                    href: business.instagram
+                });
+            }
+            
+            if (business.address) {
+                contacts.push({
+                    icon: 'fas fa-map-marker-alt',
+                    label: 'Address',
+                    value: business.address.length > 50 ? business.address.substring(0, 50) + '...' : business.address
+                });
+            }
+
+            const contactsHtml = contacts.map(contact => `
+                <div class="contact-item">
+                    <i class="contact-icon ${contact.icon}"></i>
+                    <div class="contact-value">
+                        ${contact.href ? `<a href="${contact.href}" target="_blank">${contact.value}</a>` : contact.value}
+                    </div>
+                </div>
+            `).join('');
+
+            const ratingHtml = business.rating ? `
+                <div class="contact-item">
+                    <div class="rating">
+                        <i class="fas fa-star"></i>
+                        <span>${business.rating}</span>
+                        ${business.reviews ? `<span style="color: #666;">(${business.reviews} reviews)</span>` : ''}
+                    </div>
+                </div>
+            ` : '';
+
+            card.innerHTML = `
+                <div class="business-name">
+                    <i class="fas fa-building"></i>
+                    ${business.name || 'Unknown Business'}
+                </div>
+                <div class="contact-info">
+                    ${contactsHtml}
+                    ${ratingHtml}
+                </div>
+            `;
+
+            return card;
+        }
+
+        function showProgress() {
+            document.getElementById('progressSection').style.display = 'block';
+            document.getElementById('resultsSection').style.display = 'none';
+        }
+
+        function resetProgress() {
+            document.getElementById('progressFill').style.width = '0%';
+            document.getElementById('progressText').textContent = '0% Complete';
+            document.getElementById('resultsFound').textContent = '0 results found';
+            document.getElementById('statusBadge').className = 'status-badge status-running';
+            document.getElementById('statusBadge').textContent = 'Running';
+        }
+
+        function resetButton() {
+            const searchBtn = document.getElementById('searchBtn');
+            searchBtn.disabled = false;
+            searchBtn.innerHTML = '<i class="fas fa-rocket"></i> Start Scraping';
+        }
+
+        function showError(message) {
+            const errorContainer = document.getElementById('errorContainer');
+            errorContainer.innerHTML = `
+                <div class="error-message">
+                    <i class="fas fa-exclamation-triangle"></i> ${message}
+                </div>
+            `;
+        }
+
+        function clearError() {
+            document.getElementById('errorContainer').innerHTML = '';
+        }
+    </script>
+</body>
+</html>

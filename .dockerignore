@@ -1,0 +1,88 @@
+# Git files
+.git
+.gitignore
+.gitattributes
+
+# Documentation
+README.md
+*.md
+
+# Environment files
+.env
+.env.local
+.env.example
+
+# Python virtual environment
+venv/
+env/
+.venv/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+.pytest_cache/
+.coverage
+htmlcov/
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Node.js (if any)
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Dashboard (not needed in Lambda)
+dashboard.py
+templates/
+static/
+
+# CLI tools (not needed in Lambda)
+manage_businesses.py
+
+# Test files
+test_*.py
+tests/
+*_test.py
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
+
+# Local database files (Lambda uses MongoDB or creates new JSON files)
+businesses_*.json
+
+# Development scripts
+dev_*.py
+debug_*.py
+
+# Docker files (not needed inside container)
+Dockerfile
+.dockerignore
+docker-compose.yml
+
+# Deployment files
+deploy.sh
+lambda-config.yml

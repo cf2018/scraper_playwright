@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Business Scraper Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: #f5f5f5;
+            color: #333;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 2rem 0;
+            margin-bottom: 2rem;
+            border-radius: 10px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .header p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        .stat-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        
+        .stat-card h3 {
+            font-size: 2rem;
+            color: #667eea;
+            margin-bottom: 0.5rem;
+        }
+        
+        .stat-card p {
+            color: #666;
+            font-size: 1.1rem;
+        }
+        
+        .filters {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+        
+        .filters h2 {
+            margin-bottom: 1rem;
+            color: #333;
+        }
+        
+        .filter-row {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        
+        .filter-group label {
+            font-weight: 600;
+            color: #555;
+        }
+        
+        select, button {
+            padding: 0.75rem 1rem;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 1rem;
+        }
+        
+        select:focus, button:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        
+        button:hover {
+            background: #5a6fd8;
+        }
+        
+        .businesses-section {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .businesses-header {
+            background: #667eea;
+            color: white;
+            padding: 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .businesses-header h2 {
+            margin: 0;
+        }
+        
+        .business-count {
+            background: rgba(255,255,255,0.2);
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.9rem;
+        }
+        
+        .business-list {
+            max-height: 600px;
+            overflow-y: auto;
+        }
+        
+        .business-item {
+            padding: 1.5rem;
+            border-bottom: 1px solid #eee;
+            transition: background-color 0.3s;
+        }
+        
+        .business-item:hover {
+            background-color: #f8f9fa;
+        }
+        
+        .business-item:last-child {
+            border-bottom: none;
+        }
+        
+        .business-name {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 0.5rem;
+        }
+        
+        .business-details {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+        
+        .business-detail {
+            font-size: 0.9rem;
+            color: #666;
+        }
+        
+        .business-detail strong {
+            color: #333;
+        }
+        
+        .business-actions {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+        
+        .status-badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 15px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+        
+        .status-contacted {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .status-not-contacted {
+            background: #fff3cd;
+            color: #856404;
+        }
+        
+        .contact-btn {
+            padding: 0.5rem 1rem;
+            font-size: 0.8rem;
+            border-radius: 5px;
+        }
+        
+        .btn-contacted {
+            background: #28a745;
+            border-color: #28a745;
+        }
+        
+        .btn-not-contacted {
+            background: #ffc107;
+            border-color: #ffc107;
+            color: #212529;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: #666;
+        }
+        
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 1rem;
+            border-radius: 5px;
+            margin: 1rem 0;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: #666;
+        }
+        
+        .empty-state h3 {
+            margin-bottom: 1rem;
+            color: #333;
+        }
+        
+        .nav-links {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        
+        .nav-link {
+            background: white;
+            color: #667eea;
+            text-decoration: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            transition: all 0.3s;
+        }
+        
+        .nav-link:hover {
+            background: #667eea;
+            color: white;
+            transform: translateY(-2px);
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .filter-row {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .business-details {
+                grid-template-columns: 1fr;
+            }
+            
+            .nav-links {
+                flex-wrap: wrap;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🏢 Business Scraper Dashboard</h1>
+            <p>Database: {{ db_type }} | Manage your scraped business data</p>
+        </div>
+        
+        <div class="nav-links">
+            <a href="/" class="nav-link">📊 Dashboard</a>
+            <a href="/export" class="nav-link">📤 Export Data</a>
+        </div>
+        
+        <div class="stats-grid">
+            <div class="stat-card">
+                <h3>{{ stats.total_businesses }}</h3>
+                <p>Total Businesses</p>
+            </div>
+            <div class="stat-card">
+                <h3>{{ stats.not_contacted }}</h3>
+                <p>Not Contacted</p>
+            </div>
+            <div class="stat-card">
+                <h3>{{ stats.contacted }}</h3>
+                <p>Contacted</p>
+            </div>
+            <div class="stat-card">
+                <h3>{{ keywords|length }}</h3>
+                <p>Search Keywords</p>
+            </div>
+        </div>
+        
+        <div class="filters">
+            <h2>🔍 Filter Businesses</h2>
+            <div class="filter-row">
+                <div class="filter-group">
+                    <label for="keyword-filter">Search Keyword:</label>
+                    <select id="keyword-filter">
+                        <option value="">All Keywords</option>
+                        {% for keyword in keywords %}
+                        <option value="{{ keyword }}">{{ keyword }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="filter-group">
+                    <label for="contact-filter">Contact Status:</label>
+                    <select id="contact-filter">
+                        <option value="">All</option>
+                        <option value="false" selected>Not Contacted</option>
+                        <option value="true">Contacted</option>
+                    </select>
+                </div>
+                
+                <div class="filter-group">
+                    <label>&nbsp;</label>
+                    <button onclick="loadBusinesses()">Apply Filters</button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="businesses-section">
+            <div class="businesses-header">
+                <h2>📋 Businesses</h2>
+                <div class="business-count" id="business-count">
+                    Loading...
+                </div>
+            </div>
+            <div class="business-list" id="business-list">
+                <div class="loading">Loading businesses...</div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        let currentBusinesses = [];
+        
+        async function loadBusinesses() {
+            const keyword = document.getElementById('keyword-filter').value;
+            const contacted = document.getElementById('contact-filter').value;
+            const businessList = document.getElementById('business-list');
+            const businessCount = document.getElementById('business-count');
+            
+            businessList.innerHTML = '<div class="loading">Loading businesses...</div>';
+            businessCount.textContent = 'Loading...';
+            
+            try {
+                const params = new URLSearchParams();
+                if (keyword) params.append('keyword', keyword);
+                if (contacted) params.append('contacted', contacted);
+                params.append('limit', '100');
+                
+                const response = await fetch(`/api/businesses?${params}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    currentBusinesses = data.businesses;
+                    renderBusinesses(data.businesses);
+                    businessCount.textContent = `${data.count} businesses`;
+                } else {
+                    businessList.innerHTML = `<div class="error">Error loading businesses: ${data.error}</div>`;
+                    businessCount.textContent = 'Error';
+                }
+            } catch (error) {
+                businessList.innerHTML = `<div class="error">Error loading businesses: ${error.message}</div>`;
+                businessCount.textContent = 'Error';
+            }
+        }
+        
+        function renderBusinesses(businesses) {
+            const businessList = document.getElementById('business-list');
+            
+            if (businesses.length === 0) {
+                businessList.innerHTML = `
+                    <div class="empty-state">
+                        <h3>No businesses found</h3>
+                        <p>Try adjusting your filters or run the scraper to add more businesses.</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            businessList.innerHTML = businesses.map(business => `
+                <div class="business-item">
+                    <div class="business-name">
+                        <a href="/business/${business._id}" style="color: #667eea; text-decoration: none;">
+                            ${business.name || 'Unnamed Business'}
+                        </a>
+                    </div>
+                    <div class="business-details">
+                        <div class="business-detail"><strong>📞 Phone:</strong> ${business.phone || 'N/A'}</div>
+                        <div class="business-detail"><strong>🌐 Website:</strong> ${business.website ? `<a href="${business.website}" target="_blank">${business.website}</a>` : 'N/A'}</div>
+                        <div class="business-detail"><strong>📧 Email:</strong> ${business.email || 'N/A'}</div>
+                        <div class="business-detail"><strong>📱 WhatsApp:</strong> ${business.whatsapp || 'N/A'}</div>
+                        <div class="business-detail"><strong>📍 Address:</strong> ${business.address || 'N/A'}</div>
+                        <div class="business-detail"><strong>⭐ Rating:</strong> ${business.rating || 'N/A'} (${business.reviews || 0} reviews)</div>
+                        <div class="business-detail"><strong>🔍 Search:</strong> ${business.search_keyword || 'N/A'}</div>
+                        <div class="business-detail"><strong>📅 Added:</strong> ${new Date(business.created_at).toLocaleString()}</div>
+                    </div>
+                    <div class="business-actions">
+                        <span class="status-badge ${business.contacted ? 'status-contacted' : 'status-not-contacted'}">
+                            ${business.contacted ? '✅ Contacted' : '⏳ Not Contacted'}
+                        </span>
+                        <button class="contact-btn ${business.contacted ? 'btn-not-contacted' : 'btn-contacted'}" 
+                                onclick="toggleContact('${business._id}', ${!business.contacted})">
+                            ${business.contacted ? 'Mark as Not Contacted' : 'Mark as Contacted'}
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        async function toggleContact(businessId, contacted) {
+            try {
+                const response = await fetch(`/api/contact/${businessId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ contacted })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Reload businesses to reflect the change
+                    await loadBusinesses();
+                } else {
+                    alert(`Error: ${data.error}`);
+                }
+            } catch (error) {
+                alert(`Error updating contact status: ${error.message}`);
+            }
+        }
+        
+        // Load businesses on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            loadBusinesses();
+        });
+    </script>
+</body>
+</html>

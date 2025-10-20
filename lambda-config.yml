@@ -1,0 +1,157 @@
+# AWS Lambda Deployment Configuration
+# Template for serverless.yml or SAM template
+
+# Serverless Framework Configuration (serverless.yml)
+service: business-scraper-lambda
+
+provider:
+  name: aws
+  runtime: python3.12
+  region: us-east-1
+  timeout: 300  # 5 minutes (maximum for Lambda)
+  memorySize: 1024  # 1GB RAM for browser operations
+  environment:
+    PLAYWRIGHT_HEADLESS: true
+    LAMBDA_ENVIRONMENT: true
+    MONGODB_CONNECTION_STRING: ${env:MONGODB_CONNECTION_STRING}
+    MONGODB_DATABASE: ${env:MONGODB_DATABASE}
+
+functions:
+  scraper:
+    handler: lambda_handler.lambda_handler
+    events:
+      - http:
+          path: /scrape
+          method: post
+          cors: true
+    layers:
+      - arn:aws:lambda:us-east-1:764866452798:layer:chrome-aws-lambda:31
+    environment:
+      PLAYWRIGHT_BROWSERS_PATH: /opt/chrome-aws-lambda/bin
+
+  health:
+    handler: lambda_handler.health_check_handler
+    events:
+      - http:
+          path: /health
+          method: get
+          cors: true
+
+  api:
+    handler: lambda_handler.api_gateway_handler
+    events:
+      - http:
+          path: /{proxy+}
+          method: ANY
+          cors: true
+
+package:
+  exclude:
+    - node_modules/**
+    - .git/**
+    - __pycache__/**
+    - .pytest_cache/**
+    - tests/**
+    - .vscode/**
+    - venv/**
+
+plugins:
+  - serverless-python-requirements
+
+custom:
+  pythonRequirements:
+    dockerizePip: true
+    slim: true
+    strip: false
+
+---
+
+# AWS SAM Template (template.yaml)
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+
+Globals:
+  Function:
+    Timeout: 300
+    MemorySize: 1024
+    Runtime: python3.12
+    Environment:
+      Variables:
+        PLAYWRIGHT_HEADLESS: true
+        LAMBDA_ENVIRONMENT: true
+
+Resources:
+  BusinessScraperFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: .
+      Handler: lambda_handler.lambda_handler
+      Events:
+        ScrapeApi:
+          Type: Api
+          Properties:
+            Path: /scrape
+            Method: post
+            Cors:
+              AllowMethods: "'POST'"
+              AllowHeaders: "'Content-Type,Authorization'"
+              AllowOrigin: "'*'"
+
+  HealthCheckFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: .
+      Handler: lambda_handler.health_check_handler
+      Events:
+        HealthApi:
+          Type: Api
+          Properties:
+            Path: /health
+            Method: get
+
+  ApiGatewayFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: .
+      Handler: lambda_handler.api_gateway_handler
+      Events:
+        CatchAll:
+          Type: Api
+          Properties:
+            Path: /{proxy+}
+            Method: ANY
+
+Outputs:
+  ScraperApi:
+    Description: "API Gateway endpoint URL for scraper function"
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/scrape"
+  
+  HealthApi:
+    Description: "API Gateway endpoint URL for health check"
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/health"
+
+---
+
+# Docker Compose for local testing (docker-compose.yml)
+version: '3.8'
+
+services:
+  scraper-lambda:
+    build: .
+    ports:
+      - "9000:8080"
+    environment:
+      - PLAYWRIGHT_HEADLESS=true
+      - LAMBDA_ENVIRONMENT=true
+      - MONGODB_CONNECTION_STRING=${MONGODB_CONNECTION_STRING:-}
+      - MONGODB_DATABASE=${MONGODB_DATABASE:-business_scraper}
+    volumes:
+      - ./.env:/var/task/.env:ro
+    command: lambda_handler.lambda_handler
+
+  lambda-test:
+    image: public.ecr.aws/lambda/python:3.12
+    volumes:
+      - .:/var/task
+    working_dir: /var/task
+    command: python lambda_handler.py
