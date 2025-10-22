@@ -212,7 +212,7 @@ resource "aws_cloudwatch_dashboard" "business_scraper" {
 resource "aws_cloudwatch_log_metric_filter" "scraping_success" {
   count          = var.enable_custom_metrics ? 1 : 0
   name           = "${var.project_name}-${var.environment}-scraping-success"
-  log_group_name = aws_cloudwatch_log_group.lambda_logs.name
+  log_group_name = aws_cloudwatch_log_group.lambda_logs[0].name
   pattern        = "[timestamp, request_id, level=\"INFO\", message=\"Scraping completed successfully\"]"
 
   metric_transformation {
@@ -226,8 +226,8 @@ resource "aws_cloudwatch_log_metric_filter" "scraping_success" {
 resource "aws_cloudwatch_log_metric_filter" "scraping_failure" {
   count          = var.enable_custom_metrics ? 1 : 0
   name           = "${var.project_name}-${var.environment}-scraping-failure"
-  log_group_name = aws_cloudwatch_log_group.lambda_logs.name
-  pattern        = "[timestamp, request_id, level=\"ERROR\", message*=\"Scraping failed\"]"
+  log_group_name = aws_cloudwatch_log_group.lambda_logs[0].name
+  pattern        = "[timestamp, request_id, level=\"ERROR\", message=\"Scraping failed\"]"
 
   metric_transformation {
     name      = "ScrapingFailure"

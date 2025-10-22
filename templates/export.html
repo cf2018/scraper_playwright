@@ -155,8 +155,8 @@
         </div>
         
         <div class="nav-links">
-            <a href="/" class="nav-link">📊 Dashboard</a>
-            <a href="/export" class="nav-link">📤 Export Data</a>
+            <a href="{{ api_prefix }}/" class="nav-link">📊 Dashboard</a>
+            <a href="{{ api_prefix }}/export" class="nav-link">📤 Export Data</a>
         </div>
         
         <div class="form-description">
@@ -205,9 +205,12 @@
     </div>
     
     <script>
+        // API prefix for all fetch calls
+        const API_PREFIX = '{{ api_prefix }}';
+        
         async function loadTotalCount() {
             try {
-                const response = await fetch('/api/stats');
+                const response = await fetch(`${API_PREFIX}/api/stats`);
                 const data = await response.json();
                 
                 if (data.success) {
@@ -230,7 +233,7 @@
                 if (contacted) params.append('contacted', contacted);
                 params.append('limit', '1000');
                 
-                const response = await fetch(`/api/businesses?${params}`);
+                const response = await fetch(`${API_PREFIX}/api/businesses?${params}`);
                 const data = await response.json();
                 
                 if (data.success) {
@@ -269,7 +272,7 @@
                 if (keyword) params.append('keyword', keyword);
                 if (contacted) params.append('contacted', contacted);
                 
-                const response = await fetch(`/api/export?${params}`);
+                const response = await fetch(`${API_PREFIX}/api/export?${params}`);
                 
                 if (response.ok) {
                     // Get filename from response headers

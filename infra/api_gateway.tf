@@ -79,10 +79,6 @@ resource "aws_api_gateway_deployment" "business_scraper" {
   lifecycle {
     create_before_destroy = true
   }
-
-  tags = merge(var.tags, {
-    Name = "${var.project_name}-${var.environment}-api-deployment"
-  })
 }
 
 # Lambda permission for API Gateway

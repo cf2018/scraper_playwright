@@ -85,6 +85,10 @@ variable "api_gateway_stage_name" {
   description = "API Gateway stage name"
   type        = string
   default     = "prod"
+  validation {
+    condition     = can(regex("^[a-zA-Z0-9_-]+$", var.api_gateway_stage_name))
+    error_message = "API Gateway stage name must contain only alphanumeric characters, hyphens, and underscores."
+  }
 }
 
 variable "enable_cloudwatch_logs" {
@@ -164,16 +168,6 @@ variable "default_max_results" {
   default     = 50
 }
 
-variable "api_gateway_stage_name" {
-  description = "API Gateway stage name"
-  type        = string
-  default     = "prod"
-  validation {
-    condition     = can(regex("^[a-zA-Z0-9_-]+$", var.api_gateway_stage_name))
-    error_message = "API Gateway stage name must contain only alphanumeric characters, hyphens, and underscores."
-  }
-}
-
 variable "enable_cloudwatch_alarms" {
   description = "Whether to create CloudWatch alarms"
   type        = bool
@@ -190,12 +184,6 @@ variable "enable_custom_metrics" {
   description = "Whether to create custom CloudWatch metrics"
   type        = bool
   default     = true
-}
-
-variable "enable_xray_tracing" {
-  description = "Whether to enable X-Ray tracing"
-  type        = bool
-  default     = false
 }
 
 variable "sns_topic_arn" {

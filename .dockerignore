@@ -48,10 +48,9 @@ node_modules/
 npm-debug.log
 yarn-error.log
 
-# Dashboard (not needed in Lambda)
+# Dashboard files - keep templates and static for Flask web UI in Lambda
+# dashboard.py not needed (using app.py instead)
 dashboard.py
-templates/
-static/
 
 # CLI tools (not needed in Lambda)
 manage_businesses.py

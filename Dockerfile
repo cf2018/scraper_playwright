@@ -18,6 +18,10 @@ RUN dnf update -y && \
     pango \
     at-spi2-atk \
     nss \
+    libdrm \
+    libxkbcommon \
+    libxshmfence \
+    alsa-lib \
     && dnf clean all
 
 # Set environment variables for Lambda
@@ -32,7 +36,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Install Playwright and browsers
 RUN playwright install chromium
-RUN playwright install-deps chromium
 
 # Copy application code
 COPY . ${LAMBDA_TASK_ROOT}/
@@ -44,4 +47,4 @@ WORKDIR ${LAMBDA_TASK_ROOT}
 RUN chmod +x lambda_handler.py
 
 # Set the Lambda handler
-CMD ["lambda_handler.lambda_handler"]
+CMD ["app.handler"]

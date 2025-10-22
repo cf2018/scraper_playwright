@@ -125,9 +125,27 @@ class BusinessScraper:
                 args=launch_args
             )
             
+            # Enhanced context with more realistic browser fingerprint
             context = await browser.new_context(
                 viewport=self.viewport,
-                user_agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36'
+                user_agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+                locale='es-AR',  # Argentine Spanish for more natural browsing
+                timezone_id='America/Argentina/Buenos_Aires',
+                permissions=['geolocation'],
+                geolocation={'latitude': -34.6037, 'longitude': -58.3816},  # Buenos Aires coordinates
+                extra_http_headers={
+                    'Accept-Language': 'es-AR,es;q=0.9,en;q=0.8',
+                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+                    'Accept-Encoding': 'gzip, deflate, br',
+                    'Sec-Ch-Ua': '"Chromium";v="131", "Not_A Brand";v="24"',
+                    'Sec-Ch-Ua-Mobile': '?0',
+                    'Sec-Ch-Ua-Platform': '"Windows"',
+                    'Sec-Fetch-Dest': 'document',
+                    'Sec-Fetch-Mode': 'navigate',
+                    'Sec-Fetch-Site': 'none',
+                    'Sec-Fetch-User': '?1',
+                    'Upgrade-Insecure-Requests': '1'
+                }
             )
             
             # Set timeout for all operations
@@ -164,9 +182,13 @@ class BusinessScraper:
                         button = page.locator(button_selector).first
                         if await button.count() > 0:
                             print(f"✓ Found and clicking consent button: {button_selector}")
-                            await button.click()
-                            await page.wait_for_timeout(1000)
-                            break
+                            try:
+                                await button.click(timeout=5000)  # 5 second timeout for cookie clicks
+                                await page.wait_for_timeout(1000)
+                                break
+                            except Exception as click_error:
+                                print(f"⚠ Could not click consent button: {click_error}")
+                                continue
                 except Exception as e:
                     print(f"No cookie dialog found or error: {e}")
                 
@@ -186,9 +208,13 @@ class BusinessScraper:
                         button = page.locator(button_selector).first
                         if await button.count() > 0:
                             print(f"✓ Found and dismissing dialog: {button_selector}")
-                            await button.click()
-                            await page.wait_for_timeout(1000)
-                            break
+                            try:
+                                await button.click(timeout=5000)  # 5 second timeout for dialog clicks
+                                await page.wait_for_timeout(1000)
+                                break
+                            except Exception as click_error:
+                                print(f"⚠ Could not click dialog button: {click_error}")
+                                continue
                 except Exception as e:
                     print(f"No dismiss dialogs found: {e}")
                 
@@ -612,8 +638,10 @@ class BusinessScraper:
                         print("Extracting business information...")
                         business_data = await self.extract_business_info(page)
                         if business_data and business_data.get('name'):
-                            # Enhance with website contact information if missing and URL available
-                            enhanced_data = await self.enhance_with_website_contacts(business_data, browser)
+                            # Skip website enhancement - causes browser context issues when scraping multiple businesses
+                            # Website extraction is disabled to maintain browser stability during multi-business scraping
+                            print("  ℹ️ Skipping website extraction to maintain browser stability")
+                            enhanced_data = business_data
                             
                             # Check for duplicates before adding
                             if self._is_duplicate_business(enhanced_data):
@@ -633,35 +661,76 @@ class BusinessScraper:
                         else:
                             print("  ❌ Could not extract valid business data")
                         
-                        # Go back to search results - more reliable approach
+                        # Go back to search results - check if page is still valid first
                         if i < len(business_links) - 1:  # Don't go back on last iteration
                             print("Going back to search results...")
-                            await page.go_back()
-                            await page.wait_for_timeout(3000)
-                            
-                            # Wait for results to load again
                             try:
-                                await page.wait_for_selector('[role="main"]', timeout=10000)
-                                print("✓ Back on search results page")
-                            except:
-                                print("⚠ Could not verify we're back on results page")
+                                # Check if page/context is still valid
+                                if page.is_closed():
+                                    print("⚠️ Page was closed, cannot go back")
+                                    raise Exception("Page closed")
+                                
+                                await page.go_back()
+                                await page.wait_for_timeout(3000)
+                                
+                                # Wait for results to load again
+                                try:
+                                    await page.wait_for_selector('[role="main"]', timeout=10000)
+                                    print("✓ Back on search results page")
+                                except:
+                                    print("⚠ Could not verify we're back on results page")
+                            except Exception as go_back_error:
+                                print(f"⚠️ Could not go back ({go_back_error}), re-navigating to search...")
+                                # Re-navigate to search results as fallback
+                                try:
+                                    await page.goto(f"https://www.google.com/maps/search/{query.replace(' ', '+')}")
+                                    await page.wait_for_timeout(3000)
+                                    await page.wait_for_selector('[role="main"]', timeout=10000)
+                                    print("✓ Re-navigated to search results")
+                                except Exception as nav_error:
+                                    print(f"❌ Failed to re-navigate: {nav_error}")
+                                    raise  # Re-raise to trigger outer error handling
                         
                     except Exception as e:
                         print(f"  ❌ Error processing business {i+1}: {e}")
-                        # Take screenshot on error (skip in Lambda)
+                        # Take screenshot on error (skip in Lambda and if page is closed)
                         if not self._is_lambda_environment():
                             try:
-                                await page.screenshot(path=f"debug_error_business_{i+1}.png")
-                                print(f"📸 Error screenshot saved as debug_error_business_{i+1}.png")
+                                if not page.is_closed():
+                                    await page.screenshot(path=f"debug_error_business_{i+1}.png")
+                                    print(f"📸 Error screenshot saved as debug_error_business_{i+1}.png")
                             except:
                                 print("⚠️ Could not save debug screenshot")
                         
-                        # Try to go back to search results even after an error
+                        # Try to recover - check if browser/page is still usable
                         try:
-                            if i < len(business_links) - 1:  # Don't go back on last iteration
-                                print("Attempting to go back to search results after error...")
-                                await page.go_back()
-                                await page.wait_for_timeout(2000)
+                            if i < len(business_links) - 1:  # Don't try to recover on last iteration
+                                print("Attempting to recover...")
+                                
+                                # Check if page is closed
+                                if page.is_closed():
+                                    print("⚠️ Page is closed, cannot continue scraping")
+                                    break  # Exit the loop, can't recover from closed page
+                                
+                                # Try to go back to search results
+                                print("Trying to go back to search results...")
+                                try:
+                                    await page.go_back(timeout=5000)
+                                    await page.wait_for_timeout(2000)
+                                    print("✓ Went back successfully")
+                                except:
+                                    # If go_back fails, try re-navigating
+                                    print("Go back failed, trying to re-navigate...")
+                                    try:
+                                        await page.goto(f"https://www.google.com/maps/search/{query.replace(' ', '+')}", timeout=10000)
+                                        await page.wait_for_timeout(3000)
+                                        print("✓ Re-navigated to search")
+                                    except Exception as nav_error:
+                                        print(f"❌ Could not recover: {nav_error}")
+                                        break  # Can't recover, exit loop
+                        except Exception as recovery_error:
+                            print(f"❌ Recovery failed: {recovery_error}")
+                            break  # Can't recover, exit loop
                         except:
                             print("Could not go back after error")
                         continue
@@ -852,31 +921,50 @@ class BusinessScraper:
             except Exception as e:
                 print(f"❌ Error extracting Instagram: {e}")
             
-            # Extract WhatsApp - check for WhatsApp links and extract phone numbers
+            # Extract WhatsApp - check for WhatsApp links across entire page including action buttons
             try:
                 print("Extracting WhatsApp...")
                 whatsapp_selectors = [
+                    # Direct WhatsApp links
                     'a[href*="wa.me"]',
                     'a[href*="whatsapp"]',
                     'a[href*="api.whatsapp.com"]',
+                    # WhatsApp buttons and labels
                     'button:has-text("WhatsApp")',
-                    'a[aria-label*="WhatsApp"]'
+                    'a[aria-label*="WhatsApp"]',
+                    # Action buttons that might contain WhatsApp links
+                    'button[data-item-id*="reserve"] a[href*="wa.me"]',
+                    'button[data-item-id*="order"] a[href*="wa.me"]',
+                    '[data-item-id*="action"] a[href*="wa.me"]',
+                    # Broader search in buttons area
+                    'button a[href*="wa.me"]',
+                    'button a[href*="whatsapp"]',
+                    # Look inside any button container
+                    '[role="button"] a[href*="wa.me"]',
+                    '[role="button"] a[href*="whatsapp"]',
+                    # Generic catch-all for any wa.me or WhatsApp links on the page
+                    '*[href*="wa.me"]',
+                    '*[href*="api.whatsapp.com"]'
                 ]
                 
                 for selector in whatsapp_selectors:
-                    whatsapp_element = page.locator(selector).first
-                    if await whatsapp_element.count() > 0:
-                        href = await whatsapp_element.get_attribute("href")
-                        if href and ("whatsapp" in href.lower() or "wa.me" in href.lower()):
-                            # Extract phone number from WhatsApp URL
-                            phone_number = self._extract_phone_from_whatsapp_url(href)
-                            if phone_number:
-                                business_data["whatsapp"] = phone_number
-                                print(f"✓ Found WhatsApp: {phone_number} (from {href})")
-                            else:
-                                business_data["whatsapp"] = href
-                                print(f"✓ Found WhatsApp URL: {href} (could not extract phone)")
-                            break
+                    try:
+                        whatsapp_element = page.locator(selector).first
+                        if await whatsapp_element.count() > 0:
+                            href = await whatsapp_element.get_attribute("href")
+                            if href and ("whatsapp" in href.lower() or "wa.me" in href.lower()):
+                                # Extract phone number from WhatsApp URL
+                                phone_number = self._extract_phone_from_whatsapp_url(href)
+                                if phone_number:
+                                    business_data["whatsapp"] = phone_number
+                                    print(f"✓ Found WhatsApp: {phone_number} (from {href})")
+                                else:
+                                    business_data["whatsapp"] = href
+                                    print(f"✓ Found WhatsApp URL: {href} (could not extract phone)")
+                                break
+                    except Exception as selector_error:
+                        # Continue to next selector if this one fails
+                        continue
                 
                 if not business_data["whatsapp"]:
                     print("❌ Could not extract WhatsApp")
@@ -1110,6 +1198,11 @@ class BusinessScraper:
         try:
             print(f"  🌐 Extracting missing contact info from website: {business_data['url']}")
             
+            # Check if browser is still valid before attempting website extraction
+            if not browser or not browser.contexts:
+                print("    ⚠️ Browser context not available, skipping website extraction")
+                return business_data
+            
             # Extract contacts from the business website
             website_contacts = await self.contact_extractor.extract_contacts(
                 business_data['url'], 
@@ -1170,7 +1263,12 @@ class BusinessScraper:
                 print("    ⚠️ Could not extract contacts from website")
                 
         except Exception as e:
-            print(f"    ❌ Error extracting from website: {e}")
+            # Website extraction is optional - don't fail the whole scraping for this
+            error_msg = str(e)
+            if "closed" in error_msg.lower():
+                print(f"    ⚠️ Browser context closed, skipping website extraction")
+            else:
+                print(f"    ❌ Error extracting from website: {e}")
         
         return business_data
     
@@ -1272,15 +1370,29 @@ class BusinessScraper:
         - https://api.whatsapp.com/send?phone=5491123456789
         - https://wa.me/5491123456789
         - https://api.whatsapp.com/send/?phone=5491123456789&text=hello
+        - https://wa.me/5491123456789?text=Hola
+        - Handles URL-encoded characters like %3D (=)
         """
         if not url:
             return None
         
+        # URL decode to handle encoded characters
+        try:
+            from urllib.parse import unquote
+            url = unquote(url)
+        except:
+            pass  # If decoding fails, continue with original URL
+        
         # Patterns to extract phone numbers from WhatsApp URLs
         patterns = [
-            r'https?://(?:api\.whatsapp\.com/send|wa\.me)/?[?&]?phone=(\+?[\d]+)',
+            # api.whatsapp.com with query params
+            r'https?://api\.whatsapp\.com/send[/?]*\??(?:.*[?&])?phone=(\+?[\d]+)',
+            # wa.me with phone in path
             r'https?://wa\.me/(\+?[\d]+)',
-            r'phone=(\+?[\d]+)'
+            # Generic phone parameter (fallback)
+            r'[?&]phone=(\+?[\d]+)',
+            # Just the phone parameter without query marker (sometimes in buttons)
+            r'phone[=:](\+?[\d]+)'
         ]
         
         for pattern in patterns:
@@ -1289,10 +1401,14 @@ class BusinessScraper:
                 phone = match.group(1)
                 # Clean and format the phone number
                 if phone:
+                    # Remove any non-digit characters except +
+                    phone = re.sub(r'[^\d+]', '', phone)
                     # Ensure + prefix for international numbers (10+ digits)
                     if not phone.startswith('+') and len(phone) >= 10:
                         phone = '+' + phone
-                    return phone
+                    # Validate phone length (should be reasonable)
+                    if 10 <= len(phone.replace('+', '')) <= 15:
+                        return phone
         
         return None
     

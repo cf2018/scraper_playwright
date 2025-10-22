@@ -162,11 +162,73 @@ class JSONDatabase:
         keyword_stats.sort(key=lambda x: x["count"], reverse=True)
         
         return {
+            "total_count": total,
             "total_businesses": total,
+            "contacted_count": contacted,
             "contacted": contacted,
+            "not_contacted_count": not_contacted,
             "not_contacted": not_contacted,
+            "search_keywords": list(keyword_counts.keys()),
             "keywords": keyword_stats
         }
+    
+    def delete_business(self, business_id: str) -> bool:
+        """Delete a business by ID."""
+        try:
+            businesses = self.data.get("businesses", [])
+            original_count = len(businesses)
+            
+            # Filter out the business with matching ID
+            self.data["businesses"] = [b for b in businesses if b.get("id") != business_id]
+            
+            if len(self.data["businesses"]) < original_count:
+                self._save_data()
+                return True
+            return False
+        except Exception as e:
+            print(f"❌ Error deleting business: {e}")
+            return False
+    
+    def delete_businesses(self, keyword: str = None, contacted: bool = None) -> int:
+        """Delete businesses based on filters."""
+        try:
+            businesses = self.data.get("businesses", [])
+            original_count = len(businesses)
+            
+            # Filter businesses to keep
+            filtered_businesses = []
+            for business in businesses:
+                should_delete = True
+                
+                # Check keyword filter
+                if keyword and business.get("search_keyword") != keyword:
+                    should_delete = False
+                
+                # Check contacted filter
+                if contacted is not None and business.get("contacted", False) != contacted:
+                    should_delete = False
+                
+                # If no filters match, don't delete
+                if keyword is None and contacted is None:
+                    should_delete = True  # Delete all if no filters
+                elif keyword is None and contacted is not None:
+                    should_delete = (business.get("contacted", False) == contacted)
+                elif keyword is not None and contacted is None:
+                    should_delete = (business.get("search_keyword") == keyword)
+                
+                if not should_delete:
+                    filtered_businesses.append(business)
+            
+            self.data["businesses"] = filtered_businesses
+            deleted_count = original_count - len(filtered_businesses)
+            
+            if deleted_count > 0:
+                self._save_data()
+            
+            return deleted_count
+        except Exception as e:
+            print(f"❌ Error deleting businesses: {e}")
+            return 0
 
 # Updated database module to use JSON fallback
 def save_scraping_results_fallback(businesses: List[Dict[str, Any]], search_keyword: str) -> Dict[str, int]:

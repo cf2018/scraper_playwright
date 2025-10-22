@@ -29,6 +29,7 @@
             text-align: center;
             margin-bottom: 40px;
             color: white;
+            position: relative;
         }
 
         .header h1 {
@@ -40,6 +41,32 @@
         .header p {
             font-size: 1.2rem;
             opacity: 0.9;
+        }
+
+        .nav-links {
+            position: absolute;
+            top: 0;
+            right: 0;
+            display: flex;
+            gap: 15px;
+        }
+
+        .nav-link {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            text-decoration: none;
+            padding: 10px 20px;
+            border-radius: 25px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .nav-link:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
         }
 
         .search-card {
@@ -310,6 +337,11 @@
 <body>
     <div class="container">
         <div class="header">
+            <div class="nav-links">
+                <a href="{{ api_prefix }}/" class="nav-link">
+                    <i class="fas fa-chart-bar"></i> View Dashboard
+                </a>
+            </div>
             <h1><i class="fas fa-map-marker-alt"></i> Business Scraper</h1>
             <p>Extract business information from Google Maps with modern web interface</p>
         </div>
@@ -383,6 +415,9 @@
     </div>
 
     <script>
+        // API prefix for all fetch calls
+        const API_PREFIX = '{{ api_prefix }}';
+        
         let currentTaskId = null;
         let progressInterval = null;
 
@@ -407,7 +442,7 @@
             searchBtn.innerHTML = '<div class="loading-spinner"></div> Starting...';
 
             try {
-                const response = await fetch('/api/scrape', {
+                const response = await fetch(`${API_PREFIX}/api/scrape`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -441,7 +476,7 @@
 
             progressInterval = setInterval(async () => {
                 try {
-                    const response = await fetch(`/api/status/${currentTaskId}`);
+                    const response = await fetch(`${API_PREFIX}/api/status/${currentTaskId}`);
                     const data = await response.json();
 
                     if (response.ok) {
@@ -478,7 +513,13 @@
 
             progressFill.style.width = data.progress + '%';
             progressText.textContent = Math.round(data.progress) + '% Complete';
-            resultsFound.textContent = data.total_found + ' results found';
+            
+            // Show live activity if available
+            if (data.current_activity) {
+                resultsFound.textContent = data.current_activity;
+            } else {
+                resultsFound.textContent = data.total_found + ' results found';
+            }
 
             // Update status badge
             statusBadge.className = 'status-badge status-' + data.status;
@@ -493,23 +534,24 @@
             const downloadBtn = document.getElementById('downloadBtn');
 
             // Update header
-            resultsTitle.textContent = `Found ${data.total_found} businesses`;
+            resultsTitle.textContent = `✅ Scraping Completed - ${data.total_found} businesses found`;
             resultsSummary.textContent = `Search: "${data.search_query}" • Duration: ${data.duration || 'N/A'}`;
 
-            // Show download button
-            if (data.json_file) {
-                downloadBtn.style.display = 'inline-flex';
-                downloadBtn.onclick = () => {
-                    window.open(`/api/download/${data.task_id}`, '_blank');
-                };
-            }
-
-            // Generate business cards
-            businessGrid.innerHTML = '';
-            data.results.forEach(business => {
-                const card = createBusinessCard(business);
-                businessGrid.appendChild(card);
-            });
+            // Show success message with link to dashboard
+            businessGrid.innerHTML = `
+                <div style="grid-column: 1/-1; text-align: center; padding: 3rem;">
+                    <i class="fas fa-check-circle" style="font-size: 4rem; color: var(--success); margin-bottom: 1rem;"></i>
+                    <h3 style="margin-bottom: 1rem;">Scraping completed successfully!</h3>
+                    <p style="color: var(--text-light); margin-bottom: 2rem;">
+                        Found ${data.total_found} business${data.total_found !== 1 ? 'es' : ''} 
+                        ${data.duplicates_found > 0 ? `(${data.duplicates_found} duplicate${data.duplicates_found !== 1 ? 's' : ''} skipped)` : ''}
+                    </p>
+                    <a href="${API_PREFIX}/dashboard" class="btn btn-primary" style="display: inline-flex; align-items: center; gap: 0.5rem;">
+                        <i class="fas fa-table"></i>
+                        View Results in Dashboard
+                    </a>
+                </div>
+            `;
 
             resultsSection.style.display = 'block';
         }

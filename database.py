@@ -18,11 +18,13 @@ class BusinessDatabase:
     
     def __init__(self):
         """Initialize MongoDB connection."""
-        self.mongodb_uri = os.getenv('MONGODB_URI')
-        self.mongodb_name = os.getenv('MONGODB_NAME', 'scraper')
+        # Support both MONGODB_URI (local) and MONGODB_CONNECTION_STRING (Lambda/Terraform)
+        self.mongodb_uri = os.getenv('MONGODB_URI') or os.getenv('MONGODB_CONNECTION_STRING')
+        # Support both MONGODB_NAME (local) and MONGODB_DATABASE (Lambda/Terraform)
+        self.mongodb_name = os.getenv('MONGODB_NAME') or os.getenv('MONGODB_DATABASE', 'scraper')
         
         if not self.mongodb_uri:
-            raise ValueError("MONGODB_URI not found in environment variables")
+            raise ValueError("MONGODB_URI or MONGODB_CONNECTION_STRING not found in environment variables")
         
         self.client = None
         self.db = None
@@ -92,16 +94,19 @@ class BusinessDatabase:
         Returns:
             bool: True if saved successfully, False if duplicate
         """
-        if not self.collection:
+        if self.collection is None:
             print("⚠️ Database not connected, skipping save")
             return False
             
         try:
             # Prepare document for insertion
+            # Support both 'website' and 'url' field names (scraper uses 'url')
+            website = business_data.get("website") or business_data.get("url", "")
+            
             document = {
                 "name": business_data.get("name", ""),
                 "phone": business_data.get("phone", ""),
-                "website": business_data.get("website", ""),
+                "website": website,
                 "email": business_data.get("email", ""),
                 "whatsapp": business_data.get("whatsapp", ""),
                 "instagram": business_data.get("instagram", ""),
@@ -167,7 +172,7 @@ class BusinessDatabase:
         Returns:
             list: List of business documents
         """
-        if not self.collection:
+        if self.collection is None:
             print("⚠️ Database not connected, returning empty list")
             return []
             
@@ -258,9 +263,13 @@ class BusinessDatabase:
             keyword_stats = list(self.collection.aggregate(pipeline))
             
             stats = {
-                "total_businesses": total_businesses,
-                "contacted": contacted_count,
-                "not_contacted": not_contacted_count,
+                "total_count": total_businesses,
+                "total_businesses": total_businesses,  # Keep for backward compatibility
+                "contacted_count": contacted_count,
+                "contacted": contacted_count,  # Keep for backward compatibility
+                "not_contacted_count": not_contacted_count,
+                "not_contacted": not_contacted_count,  # Keep for backward compatibility
+                "search_keywords": [item["_id"] for item in keyword_stats if item["_id"]],
                 "keywords": keyword_stats
             }
             
@@ -271,11 +280,169 @@ class BusinessDatabase:
             print(f"❌ Error getting stats: {e}")
             return {}
     
+    def delete_business(self, business_id: str) -> bool:
+        """
+        Delete a business by ID.
+        
+        Args:
+            business_id: The business ID to delete
+            
+        Returns:
+            bool: True if deleted successfully, False otherwise
+        """
+        if self.collection is None:
+            return False
+            
+        try:
+            from bson import ObjectId
+            result = self.collection.delete_one({"_id": ObjectId(business_id)})
+            return result.deleted_count > 0
+        except Exception as e:
+            print(f"❌ Error deleting business: {e}")
+            return False
+    
+    def delete_businesses(self, keyword: str = None, contacted: bool = None) -> int:
+        """
+        Delete businesses based on filters.
+        
+        Args:
+            keyword: Optional keyword filter
+            contacted: Optional contacted status filter
+            
+        Returns:
+            int: Number of businesses deleted
+        """
+        if self.collection is None:
+            return 0
+            
+        try:
+            # Build filter
+            filter_query = {}
+            
+            if keyword:
+                filter_query["search_keyword"] = keyword
+                
+            if contacted is not None:
+                filter_query["contacted"] = contacted
+            
+            result = self.collection.delete_many(filter_query)
+            print(f"🗑️ Deleted {result.deleted_count} businesses")
+            return result.deleted_count
+        except Exception as e:
+            print(f"❌ Error deleting businesses: {e}")
+            return 0
+    
     def close(self):
         """Close MongoDB connection."""
         if self.client:
             self.client.close()
             print("✅ MongoDB connection closed")
+    
+    # ==================== SCRAPING TASK MANAGEMENT ====================
+    
+    def create_scraping_task(self, task_id, search_query, max_results):
+        """
+        Create a new scraping task in MongoDB.
+        
+        Args:
+            task_id: Unique task identifier
+            search_query: Search query string
+            max_results: Maximum number of results to scrape
+            
+        Returns:
+            dict: Created task document
+        """
+        if self.db is None:
+            raise Exception("MongoDB connection not available")
+        
+        task = {
+            '_id': task_id,
+            'search_query': search_query,
+            'max_results': max_results,
+            'status': 'pending',
+            'progress': 0,
+            'total_found': 0,
+            'duplicates_found': 0,
+            'current_activity': 'Initializing...',
+            'error': None,
+            'created_at': datetime.now(),
+            'updated_at': datetime.now(),
+            'completed_at': None
+        }
+        
+        self.db.scraping_tasks.insert_one(task)
+        print(f"📝 Created scraping task: {task_id}")
+        return task
+    
+    def get_scraping_task(self, task_id):
+        """
+        Get a scraping task by ID.
+        
+        Args:
+            task_id: Task identifier
+            
+        Returns:
+            dict: Task document or None
+        """
+        if self.db is None:
+            return None
+        
+        return self.db.scraping_tasks.find_one({'_id': task_id})
+    
+    def update_scraping_task(self, task_id, updates):
+        """
+        Update a scraping task.
+        
+        Args:
+            task_id: Task identifier
+            updates: Dictionary of fields to update
+            
+        Returns:
+            bool: True if successful
+        """
+        if self.db is None:
+            return False
+        
+        updates['updated_at'] = datetime.now()
+        
+        result = self.db.scraping_tasks.update_one(
+            {'_id': task_id},
+            {'$set': updates}
+        )
+        
+        return result.modified_count > 0
+    
+    def complete_scraping_task(self, task_id, status='completed', error=None):
+        """
+        Mark a scraping task as completed or failed.
+        
+        Args:
+            task_id: Task identifier
+            status: Final status ('completed' or 'error')
+            error: Error message if status is 'error'
+            
+        Returns:
+            bool: True if successful
+        """
+        if self.db is None:
+            return False
+        
+        updates = {
+            'status': status,
+            'completed_at': datetime.now(),
+            'updated_at': datetime.now()
+        }
+        
+        if error:
+            updates['error'] = error
+        
+        result = self.db.scraping_tasks.update_one(
+            {'_id': task_id},
+            {'$set': updates}
+        )
+        
+        print(f"✅ Task {task_id} marked as {status}")
+        return result.modified_count > 0
 
 # Utility functions for easy access
 def save_scraping_results(businesses: List[Dict[str, Any]], search_keyword: str) -> Dict[str, int]:

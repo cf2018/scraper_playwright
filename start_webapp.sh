@@ -32,5 +32,9 @@ echo "📍 The web interface will be available at: http://localhost:5000"
 echo "⏹️  Press Ctrl+C to stop the server"
 echo ""
 
-# Start the Flask app
+# Start the merged Flask app
+echo "🎯 Application Structure:"
+echo "   📊 Dashboard:     http://localhost:5000/"
+echo "   🕷️  Scraping:     http://localhost:5000/scrape"
+echo ""
 python app.py

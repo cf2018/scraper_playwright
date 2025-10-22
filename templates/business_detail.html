@@ -173,8 +173,8 @@
         </div>
         
         <div class="nav-links">
-            <a href="/" class="nav-link">📊 Dashboard</a>
-            <a href="/export" class="nav-link">📤 Export Data</a>
+            <a href="{{ api_prefix }}/" class="nav-link">📊 Dashboard</a>
+            <a href="{{ api_prefix }}/export" class="nav-link">📤 Export Data</a>
         </div>
         
         <div class="business-card">
@@ -293,9 +293,12 @@
     </div>
     
     <script>
+        // API prefix for all fetch calls
+        const API_PREFIX = '{{ api_prefix }}';
+        
         async function toggleContact(businessId, contacted) {
             try {
-                const response = await fetch(`/api/contact/${businessId}`, {
+                const response = await fetch(`${API_PREFIX}/api/contact/${businessId}`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
